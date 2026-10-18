@@ -1,0 +1,10 @@
+{
+  "description": "Stay updated with live football scores, fixtures, and personalized news in a sleek mobile app designed for passionate fans and players alike.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
