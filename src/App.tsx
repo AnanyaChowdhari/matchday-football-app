@@ -202,7 +202,7 @@ function TopBar({
           <Icon name="back" size={19} />
         </Pressable>
       ) : (
-        <div>
+        <div className="masthead-copy">
           <div className="eyebrow">{subtitle}</div>
           <div className="brand">{title || "Matchday"}</div>
         </div>
@@ -231,7 +231,7 @@ function LiveMatchCard({ onOpen }: { onOpen: () => void }) {
       <div className="live-card-top">
         <div className="league-label">
           <span className="league-mark">PL</span>
-          Premier League
+          Premier League · Etihad
         </div>
         <div className="live-pill">
           <span className="pulse-dot" />
@@ -309,8 +309,8 @@ function FixtureRow({
 
 function HomeScreen({ openMatch }: { openMatch: () => void }) {
   return (
-    <div className="screen">
-      <TopBar subtitle="SATURDAY, 24 MAY" />
+    <div className="screen home-screen">
+      <TopBar subtitle="Saturday, 24 May" />
 
       <div className="date-strip">
         {[
@@ -329,7 +329,7 @@ function HomeScreen({ openMatch }: { openMatch: () => void }) {
       </div>
 
       <main className="content">
-        <SectionTitle action="All matches">Live now</SectionTitle>
+        <SectionTitle action="All matches">Tonight</SectionTitle>
         <LiveMatchCard onOpen={openMatch} />
 
         <SectionTitle action="Edit">Your clubs</SectionTitle>
@@ -394,32 +394,11 @@ function HomeScreen({ openMatch }: { openMatch: () => void }) {
           </Pressable>
         </div>
 
-        <SectionTitle action="Full table">Premier League</SectionTitle>
-        <div className="card table-card">
-          <div className="table-row table-head">
-            <span>POS</span><span>CLUB</span><span>PL</span><span>GD</span><span>PTS</span>
-          </div>
-          {[
-            ["1", crest.arsenal, "Arsenal", "36", "+42", "84"],
-            ["2", crest.city, "Man City", "36", "+48", "82"],
-            ["3", crest.liverpool, "Liverpool", "36", "+39", "78"],
-            ["4", crest.chelsea, "Chelsea", "36", "+22", "68"],
-          ].map(([pos, src, name, played, gd, pts]) => (
-            <div className="table-row" key={name}>
-              <span className="position">{pos}</span>
-              <span className="table-team">
-                <Crest name={name} size="small" src={src} /> {name}
-              </span>
-              <span>{played}</span><span>{gd}</span><strong>{pts}</strong>
-            </div>
-          ))}
-        </div>
-
-        <SectionTitle action="More stories">Latest news</SectionTitle>
+        <SectionTitle action="More stories">The briefing</SectionTitle>
         <Pressable className="feature-story">
           <img alt="Football stadium under lights" src={stadiumPhoto} />
           <div className="story-overlay">
-            <span className="story-tag">THE TITLE RACE</span>
+            <span className="story-tag">The title race</span>
             <div className="story-title">One final weekend. Everything still to play for.</div>
             <div className="story-meta">Matchday Desk · 18 min ago</div>
           </div>
@@ -443,7 +422,7 @@ function MatchCentre({ onBack }: { onBack: () => void }) {
     <div className="screen match-screen">
       <TopBar onBack={onBack} title="Match Centre" />
       <div className="match-hero">
-        <div className="competition">PREMIER LEAGUE · ETIHAD STADIUM</div>
+        <div className="competition">Premier League · Etihad Stadium</div>
         <div className="hero-score">
           <div className="hero-team">
             <Crest name="Manchester City" size="large" src={crest.city} />
@@ -480,7 +459,7 @@ function MatchCentre({ onBack }: { onBack: () => void }) {
         {matchTab === "Timeline" && (
           <>
             <div className="live-commentary card">
-              <span className="live-kicker"><i /> LIVE COMMENTARY</span>
+              <span className="live-kicker"><i /> Live commentary</span>
               <div>Liverpool are pressing high as City look to slow the tempo.</div>
               <small>67&apos; · Attacking phase</small>
             </div>
@@ -584,8 +563,8 @@ function MatchCentre({ onBack }: { onBack: () => void }) {
 function DiscoverScreen() {
   const [topic, setTopic] = useState("For you");
   return (
-    <div className="screen">
-      <TopBar subtitle="YOUR FOOTBALL FEED" title="Discover" />
+    <div className="screen discover-screen">
+      <TopBar subtitle="The football desk" title="Discover" />
       <div className="topic-tabs">
         {["For you", "Latest", "Transfers", "Tactics"].map((item) => (
           <Pressable className={topic === item ? "active" : ""} key={item} onClick={() => setTopic(item)}>
@@ -598,7 +577,7 @@ function DiscoverScreen() {
           <img alt="Football match in progress" src={matchPhoto} />
           <div className="image-shade" />
           <div className="discover-hero-copy">
-            <span className="story-tag">MATCHDAY ANALYSIS</span>
+            <span className="story-tag">Matchday analysis</span>
             <div className="discover-headline">The five minutes that changed the title race</div>
             <p>How one tactical switch turned pressure into a statement win.</p>
             <span className="story-meta">6 min read · 24 min ago</span>
@@ -623,7 +602,7 @@ function DiscoverScreen() {
           </Pressable>
         </div>
 
-        <SectionTitle action="Latest">Top stories</SectionTitle>
+        <SectionTitle action="Latest">The features</SectionTitle>
         <div className="editorial-grid">
           <Pressable className="editorial-main">
             <img alt="Football stadium packed with supporters" src={floodlightsPhoto} />
@@ -685,8 +664,8 @@ function DiscoverScreen() {
 function MatchesScreen({ openMatch }: { openMatch: () => void }) {
   const [filter, setFilter] = useState("All");
   return (
-    <div className="screen">
-      <TopBar subtitle="ALL COMPETITIONS" title="Matches" />
+    <div className="screen matches-screen">
+      <TopBar subtitle="All competitions" title="Matches" />
       <div className="match-date">
         <Pressable className="circle-button"><Icon name="back" size={17} /></Pressable>
         <div><strong>Saturday, 24 May</strong><span>12 matches</span></div>
@@ -705,7 +684,7 @@ function MatchesScreen({ openMatch }: { openMatch: () => void }) {
           <img alt="Football stadium during a night match" src={nightMatchPhoto} />
           <div className="competition-highlight-shade" />
           <div className="competition-highlight-copy">
-            <span><i /> LIVE AT THE ETIHAD</span>
+            <span><i /> Live at the Etihad</span>
             <strong>City edge a breathless<br />title-race clash</strong>
             <small>Tap for live commentary and analytics <Icon name="arrow" size={13} /></small>
           </div>
@@ -734,7 +713,7 @@ function MatchesScreen({ openMatch }: { openMatch: () => void }) {
           </div>
         </div>
         <div className="competition-block">
-          <div className="competition-head"><span className="league-mark coral">CL</span><strong>Champions League</strong><span>Europe</span></div>
+          <div className="competition-head"><span className="league-mark europe">CL</span><strong>Champions League</strong><span>Europe</span></div>
           <div className="compact-match">
             <span>20:00</span>
             <div><Crest name="Real Madrid" size="small" src={crest.real} /><span>Real Madrid</span><strong>–</strong></div>
@@ -758,15 +737,15 @@ function MatchesScreen({ openMatch }: { openMatch: () => void }) {
 
 function ProfileScreen() {
   return (
-    <div className="screen">
-      <TopBar subtitle="MATCHDAY MEMBER" title="Profile" />
+    <div className="screen profile-screen">
+      <TopBar subtitle="Matchday member" title="Profile" />
       <main className="content profile-content">
         <div className="profile-card">
           <div className="avatar">JD</div>
           <div><div className="profile-name">Jamie Davies</div><span>Following 4 clubs · London</span></div>
           <Pressable className="circle-button"><Icon name="settings" size={18} /></Pressable>
         </div>
-        <SectionTitle>Your season</SectionTitle>
+        <SectionTitle>This season</SectionTitle>
         <div className="season-grid">
           <div><strong>126</strong><span>Matches followed</span></div>
           <div><strong>18</strong><span>Live matches</span></div>
