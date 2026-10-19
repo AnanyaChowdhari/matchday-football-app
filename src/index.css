@@ -219,12 +219,12 @@ img {
   border: 2px solid var(--surface);
   background: var(--blue);
 }
-
 .date-strip {
-  padding: 10px var(--gutter) 8px;
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .date-item {
@@ -2032,4 +2032,52 @@ img {
   .screen {
     min-height: 100%;
   }
+}
+.home-hero {
+  position: relative;
+  overflow: hidden;
+  margin: 24px 0 30px;
+  min-height: 190px;
+  border: 1px solid #26364c;
+  border-radius: 22px;
+  background:
+    radial-gradient(ellipse at 85% 15%, #246bfd55, transparent 45%),
+    linear-gradient(135deg, #172a43, #08111f 75%);
+}
+
+.home-hero-overlay {
+  position: relative;
+  display: flex;
+  min-height: 190px;
+  box-sizing: border-box;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 22px;
+  background: linear-gradient(
+    0deg,
+    rgba(5, 10, 18, 0.8),
+    transparent
+  );
+}
+
+.home-hero-label {
+  color: #79a3ff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.home-hero h2 {
+  margin: 10px 0 6px;
+  color: #fff;
+  font-size: 27px;
+  line-height: 1.15;
+}
+
+.home-hero p {
+  max-width: 300px;
+  margin: 0;
+  color: #b8c5d8;
+  font-size: 13px;
+  line-height: 1.6;
 }

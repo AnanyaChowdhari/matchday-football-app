@@ -19,7 +19,7 @@ const cache = new Map();
 const LIVE_CACHE_TTL = 30 * 1000;
 const DATE_CACHE_TTL = 5 * 60 * 1000;
 
-app.get('/api/fixtures', async (req, res) => {
+'/api/fixtures', async (req, res) => {
   try {
     const { date } = req.query;
 

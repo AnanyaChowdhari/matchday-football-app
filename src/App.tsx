@@ -425,12 +425,56 @@ function HomeScreen({ openMatch }: { openMatch: () => void }) {
 
       <main className="content">
         {isToday && (
-          <>
-            <SectionTitle action="All matches">Tonight</SectionTitle>
-            <LiveMatchCard onOpen={openMatch} />
-          </>
-        )}
+  <>
+    <SectionTitle>Live now</SectionTitle>
 
+    {fixtures.filter((fixture) =>
+      ["1H", "HT", "2H", "ET", "BT", "P", "LIVE"].includes(
+        fixture.status
+      )
+    ).length > 0 ? (
+      fixtures
+        .filter((fixture) =>
+          ["1H", "HT", "2H", "ET", "BT", "P", "LIVE"].includes(
+            fixture.status
+          )
+        )
+        .map((fixture) => (
+          <div className="card fixtures" key={fixture.id}>
+            <div className="fixture-heading">
+              <span>{fixture.league.name}</span>
+              <span>
+                LIVE{fixture.elapsed != null ? ` · ${fixture.elapsed}'` : ""}
+              </span>
+            </div>
+
+            <FixtureRow
+              home={fixture.homeTeam.name}
+              homeCrest={fixture.homeTeam.logo}
+              away={fixture.awayTeam.name}
+              awayCrest={fixture.awayTeam.logo}
+              time={`${fixture.score.home ?? 0} — ${fixture.score.away ?? 0}`}
+            />
+          </div>
+        ))
+    ) : (
+      <div className="card" style={{ padding: "24px 20px" }}>
+        <strong>No live matches right now</strong>
+        <p style={{ color: "var(--muted)", fontSize: "13px" }}>
+          Check the fixtures below for today's scheduled matches.
+        </p>
+      </div>
+    )}
+  </>
+)}
+
+        <div className="home-hero">
+  <div className="home-hero-overlay">
+    <span className="home-hero-label">YOUR MATCHDAY</span>
+    <h2>Your clubs. Your game.</h2>
+    <p>Fixtures, results and the moments that matter.</p>
+  </div>
+</div>
         <SectionTitle action="Edit">Your clubs</SectionTitle>
         <div className="club-strip">
           {[
