@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, useEffect as ReactUseEffect, type ReactNode } from "react";
 
 type Tab = "home" | "matches" | "discover" | "profile";
 
@@ -308,29 +308,128 @@ function FixtureRow({
 }
 
 function HomeScreen({ openMatch }: { openMatch: () => void }) {
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [fixtures, setFixtures] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [isLivePolling, setIsLivePolling] = useState(false);
+
+  const generateDateStrip = () => {
+    const dates: Date[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (let i = -3; i <= 3; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      dates.push(date);
+    }
+    return dates;
+  };
+
+  const formatDate = (date: Date) => {
+    const dayNames = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const day = dayNames[date.getDay()];
+    const dateNum = date.getDate();
+    const isToday = date.toDateString() === new Date().toDateString();
+    return {
+      day: isToday ? "TODAY" : day,
+      date: dateNum,
+      fullDate: date.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" }),
+      isoDate: date.toISOString().split('T')[0],
+    };
+  };
+
+  const dateStrip = generateDateStrip();
+
+  const fetchFixtures = async (dateStr: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`http://localhost:3001/api/fixtures?date=${dateStr}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch fixtures');
+      }
+      const data = await response.json();
+      setFixtures(data.fixtures || []);
+      setLastUpdated(data.lastUpdated || null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      setFixtures([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isToday = selectedDate.toDateString() === new Date().toDateString();
+
+  ReactUseEffect(() => {
+    const { isoDate } = formatDate(selectedDate);
+    fetchFixtures(isoDate);
+
+    let intervalId: NodeJS.Timeout | null = null;
+
+    if (isToday) {
+      setIsLivePolling(true);
+      intervalId = setInterval(() => {
+        fetchFixtures(isoDate);
+      }, 5 * 60 * 1000);
+    } else {
+      setIsLivePolling(false);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [selectedDate, isToday]);
+
+  const groupFixturesByLeague = (fixtures: any[]) => {
+    const grouped: Record<string, any[]> = {};
+    fixtures.forEach(fixture => {
+      const leagueName = fixture.league.name;
+      if (!grouped[leagueName]) {
+        grouped[leagueName] = [];
+      }
+      grouped[leagueName].push(fixture);
+    });
+    return grouped;
+  };
+
+  const groupedFixtures = groupFixturesByLeague(fixtures);
+
   return (
     <div className="screen home-screen">
-      <TopBar subtitle="Saturday, 24 May" />
+      <TopBar subtitle={formatDate(selectedDate).fullDate} />
 
       <div className="date-strip">
-        {[
-          ["WED", "21"],
-          ["THU", "22"],
-          ["FRI", "23"],
-          ["TODAY", "24"],
-          ["SUN", "25"],
-          ["MON", "26"],
-        ].map(([day, date]) => (
-          <Pressable className={`date-item ${day === "TODAY" ? "active" : ""}`} key={date}>
-            <span>{day}</span>
-            <strong>{date}</strong>
-          </Pressable>
-        ))}
+        {dateStrip.map((date) => {
+          const { day, date: dateNum } = formatDate(date);
+          const isSelected = date.toDateString() === selectedDate.toDateString();
+          return (
+            <Pressable
+              className={`date-item ${isSelected ? "active" : ""}`}
+              key={date.toISOString()}
+              onClick={() => setSelectedDate(date)}
+              aria-label={`${day} ${dateNum}`}
+            >
+              <span>{day}</span>
+              <strong>{dateNum}</strong>
+            </Pressable>
+          );
+        })}
       </div>
 
       <main className="content">
-        <SectionTitle action="All matches">Tonight</SectionTitle>
-        <LiveMatchCard onOpen={openMatch} />
+        {isToday && (
+          <>
+            <SectionTitle action="All matches">Tonight</SectionTitle>
+            <LiveMatchCard onOpen={openMatch} />
+          </>
+        )}
 
         <SectionTitle action="Edit">Your clubs</SectionTitle>
         <div className="club-strip">
@@ -351,28 +450,72 @@ function HomeScreen({ openMatch }: { openMatch: () => void }) {
           </Pressable>
         </div>
 
-        <SectionTitle action="Full schedule">Coming up</SectionTitle>
-        <div className="card fixtures">
-          <div className="fixture-heading">
-            <span>Premier League</span>
-            <span>Today</span>
+        <SectionTitle action="Full schedule">
+          {isToday ? "Coming up" : "Fixtures"}
+        </SectionTitle>
+        {loading ? (
+          <div className="card" style={{ padding: "40px 20px", textAlign: "center" }}>
+            <div style={{ color: "var(--muted)", fontSize: "14px" }}>Loading fixtures...</div>
           </div>
-          <FixtureRow
-            away="Chelsea"
-            awayCrest={crest.chelsea}
-            home="Arsenal"
-            homeCrest={crest.arsenal}
-            time="17:30"
-          />
-          <div className="line" />
-          <FixtureRow
-            away="Aston Villa"
-            awayCrest={crest.villa}
-            home="Man United"
-            homeCrest={crest.united}
-            time="20:00"
-          />
-        </div>
+        ) : error ? (
+          <div className="card" style={{ padding: "40px 20px", textAlign: "center" }}>
+            <div style={{ color: "var(--muted)", fontSize: "14px", marginBottom: "8px" }}>
+              Unable to load fixtures
+            </div>
+            <div style={{ color: "var(--muted-2)", fontSize: "12px" }}>
+              {error}
+            </div>
+          </div>
+        ) : Object.keys(groupedFixtures).length > 0 ? (
+          <>
+            {isToday && lastUpdated && (
+              <div style={{ marginBottom: "12px", textAlign: "center" }}>
+                <span style={{ color: "var(--muted-2)", fontSize: "11px" }}>
+                  {isLivePolling ? "Live polling • " : ""}
+                  Updated {new Date(lastUpdated).toLocaleTimeString()}
+                </span>
+              </div>
+            )}
+            {Object.entries(groupedFixtures).map(([leagueName, leagueFixtures], idx) => (
+              <div className="card fixtures" key={idx}>
+                <div className="fixture-heading">
+                  <span>{leagueName}</span>
+                  <span>{leagueFixtures.length} match{leagueFixtures.length !== 1 ? 'es' : ''}</span>
+                </div>
+              {leagueFixtures.map((fixture, matchIdx) => {
+                const kickoffTime = new Date(fixture.date).toLocaleTimeString('en-GB', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false
+                });
+                const isLive = fixture.status === 'LIVE' || fixture.status === '1H' || fixture.status === '2H';
+                const isFinished = fixture.status === 'FT';
+                return (
+                  <div key={fixture.id}>
+                    <FixtureRow
+                      away={fixture.awayTeam.name}
+                      awayCrest={fixture.awayTeam.logo}
+                      home={fixture.homeTeam.name}
+                      homeCrest={fixture.homeTeam.logo}
+                      time={isFinished ? 'FT' : isLive ? `${fixture.elapsed}'` : kickoffTime}
+                    />
+                    {matchIdx < leagueFixtures.length - 1 && <div className="line" />}
+                  </div>
+                );
+              })}
+            </div>
+            ))}
+          </>
+        ) : (
+          <div className="card" style={{ padding: "40px 20px", textAlign: "center" }}>
+            <div style={{ color: "var(--muted)", fontSize: "14px", marginBottom: "8px" }}>
+              No fixtures for this date
+            </div>
+            <div style={{ color: "var(--muted-2)", fontSize: "12px" }}>
+              Try selecting a different date
+            </div>
+          </div>
+        )}
 
         <SectionTitle action="All results">Last night</SectionTitle>
         <div className="results-scroll">
@@ -663,13 +806,103 @@ function DiscoverScreen() {
 
 function MatchesScreen({ openMatch }: { openMatch: () => void }) {
   const [filter, setFilter] = useState("All");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [fixtures, setFixtures] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [isLivePolling, setIsLivePolling] = useState(false);
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+  };
+
+  const toIsoDate = (date: Date) => {
+    return date.toISOString().split('T')[0];
+  };
+
+  const isToday = selectedDate.toDateString() === new Date().toDateString();
+
+  const fetchFixtures = async (dateStr: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`http://localhost:3001/api/fixtures?date=${dateStr}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch fixtures');
+      }
+      const data = await response.json();
+      setFixtures(data.fixtures || []);
+      setLastUpdated(data.lastUpdated || null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      setFixtures([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  ReactUseEffect(() => {
+    fetchFixtures(toIsoDate(selectedDate));
+
+    let intervalId: NodeJS.Timeout | null = null;
+
+    if (isToday) {
+      setIsLivePolling(true);
+      intervalId = setInterval(() => {
+        fetchFixtures(toIsoDate(selectedDate));
+      }, 5 * 60 * 1000);
+    } else {
+      setIsLivePolling(false);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [selectedDate, isToday]);
+
+  const groupFixturesByLeague = (fixtures: any[]) => {
+    const grouped: Record<string, any[]> = {};
+    fixtures.forEach(fixture => {
+      const leagueName = fixture.league.name;
+      if (!grouped[leagueName]) {
+        grouped[leagueName] = [];
+      }
+      grouped[leagueName].push(fixture);
+    });
+    return grouped;
+  };
+
+  const groupedFixtures = groupFixturesByLeague(fixtures);
+  const totalMatches = fixtures.length;
+
+  const getLeagueMark = (leagueName: string) => {
+    if (leagueName.includes('Premier League')) return 'PL';
+    if (leagueName.includes('Champions League')) return 'CL';
+    if (leagueName.includes('La Liga')) return 'LL';
+    if (leagueName.includes('Serie A')) return 'SA';
+    if (leagueName.includes('Bundesliga')) return 'BL';
+    if (leagueName.includes('Ligue 1')) return 'L1';
+    return '??';
+  };
+
   return (
     <div className="screen matches-screen">
       <TopBar subtitle="All competitions" title="Matches" />
       <div className="match-date">
-        <Pressable className="circle-button"><Icon name="back" size={17} /></Pressable>
-        <div><strong>Saturday, 24 May</strong><span>12 matches</span></div>
-        <Pressable className="circle-button"><Icon name="arrow" size={17} /></Pressable>
+        <Pressable className="circle-button" onClick={() => {
+          const newDate = new Date(selectedDate);
+          newDate.setDate(newDate.getDate() - 1);
+          setSelectedDate(newDate);
+        }}><Icon name="back" size={17} /></Pressable>
+        <div><strong>{formatDate(selectedDate)}</strong><span>{totalMatches} match{totalMatches !== 1 ? 'es' : ''}</span></div>
+        <Pressable className="circle-button" onClick={() => {
+          const newDate = new Date(selectedDate);
+          newDate.setDate(newDate.getDate() + 1);
+          setSelectedDate(newDate);
+        }}><Icon name="arrow" size={17} /></Pressable>
       </div>
       <div className="competition-filters">
         {["All", "Live", "Premier League", "Champions League", "La Liga"].map((item) => (
@@ -680,51 +913,79 @@ function MatchesScreen({ openMatch }: { openMatch: () => void }) {
         ))}
       </div>
       <main className="content">
-        <Pressable className="competition-highlight" onClick={openMatch}>
-          <img alt="Football stadium during a night match" src={nightMatchPhoto} />
-          <div className="competition-highlight-shade" />
-          <div className="competition-highlight-copy">
-            <span><i /> Live at the Etihad</span>
-            <strong>City edge a breathless<br />title-race clash</strong>
-            <small>Tap for live commentary and analytics <Icon name="arrow" size={13} /></small>
+        {loading ? (
+          <div className="card" style={{ padding: "40px 20px", textAlign: "center" }}>
+            <div style={{ color: "var(--muted)", fontSize: "14px" }}>Loading fixtures...</div>
           </div>
-          <div className="highlight-score">
-            <Crest name="Manchester City" src={crest.city} />
-            <strong>2—1</strong>
-            <Crest name="Liverpool" src={crest.liverpool} />
+        ) : error ? (
+          <div className="card" style={{ padding: "40px 20px", textAlign: "center" }}>
+            <div style={{ color: "var(--muted)", fontSize: "14px", marginBottom: "8px" }}>
+              Unable to load fixtures
+            </div>
+            <div style={{ color: "var(--muted-2)", fontSize: "12px" }}>
+              {error}
+            </div>
           </div>
-        </Pressable>
-        <div className="competition-block">
-          <div className="competition-head"><span className="league-mark">PL</span><strong>Premier League</strong><span>England</span></div>
-          <Pressable className="compact-live" onClick={openMatch}>
-            <span className="mini-live">LIVE 67&apos;</span>
-            <div><Crest name="Manchester City" size="small" src={crest.city} /><span>Manchester City</span><strong>2</strong></div>
-            <div><Crest name="Liverpool" size="small" src={crest.liverpool} /><span>Liverpool</span><strong>1</strong></div>
-          </Pressable>
-          <div className="compact-match">
-            <span>17:30</span>
-            <div><Crest name="Arsenal" size="small" src={crest.arsenal} /><span>Arsenal</span><strong>–</strong></div>
-            <div><Crest name="Chelsea" size="small" src={crest.chelsea} /><span>Chelsea</span><strong>–</strong></div>
+        ) : Object.keys(groupedFixtures).length > 0 ? (
+          <>
+            {isToday && lastUpdated && (
+              <div style={{ marginBottom: "12px", textAlign: "center" }}>
+                <span style={{ color: "var(--muted-2)", fontSize: "11px" }}>
+                  {isLivePolling ? "Live polling • " : ""}
+                  Updated {new Date(lastUpdated).toLocaleTimeString()}
+                </span>
+              </div>
+            )}
+            {Object.entries(groupedFixtures).map(([leagueName, leagueFixtures], idx) => (
+              <div className="competition-block" key={idx}>
+                <div className="competition-head">
+                  <span className={`league-mark ${leagueName.includes('Champions') ? 'europe' : ''}`}>
+                    {getLeagueMark(leagueName)}
+                  </span>
+                  <strong>{leagueName}</strong>
+                  <span>{leagueFixtures[0]?.league.country || ''}</span>
+                </div>
+              {leagueFixtures.map((fixture) => {
+                const kickoffTime = new Date(fixture.date).toLocaleTimeString('en-GB', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false
+                });
+                const isLive = fixture.status === 'LIVE' || fixture.status === '1H' || fixture.status === '2H';
+                const isFinished = fixture.status === 'FT';
+                const isNotStarted = fixture.status === 'NS' || fixture.status === 'TBD';
+
+                if (isLive) {
+                  return (
+                    <Pressable className="compact-live" key={fixture.id} onClick={openMatch}>
+                      <span className="mini-live">LIVE {fixture.elapsed}'</span>
+                      <div><Crest name={fixture.homeTeam.name} size="small" src={fixture.homeTeam.logo} /><span>{fixture.homeTeam.name}</span><strong>{fixture.score.home}</strong></div>
+                      <div><Crest name={fixture.awayTeam.name} size="small" src={fixture.awayTeam.logo} /><span>{fixture.awayTeam.name}</span><strong>{fixture.score.away}</strong></div>
+                    </Pressable>
+                  );
+                }
+
+                return (
+                  <div className={`compact-match ${isFinished ? 'finished' : ''}`} key={fixture.id}>
+                    <span>{isFinished ? 'FT' : isNotStarted ? kickoffTime : fixture.status}</span>
+                    <div><Crest name={fixture.homeTeam.name} size="small" src={fixture.homeTeam.logo} /><span>{fixture.homeTeam.name}</span><strong>{isNotStarted ? '–' : fixture.score.home}</strong></div>
+                    <div><Crest name={fixture.awayTeam.name} size="small" src={fixture.awayTeam.logo} /><span>{fixture.awayTeam.name}</span><strong>{isNotStarted ? '–' : fixture.score.away}</strong></div>
+                  </div>
+                );
+              })}
+            </div>
+            ))}
+          </>
+        ) : (
+          <div className="card" style={{ padding: "40px 20px", textAlign: "center" }}>
+            <div style={{ color: "var(--muted)", fontSize: "14px", marginBottom: "8px" }}>
+              No fixtures for this date
+            </div>
+            <div style={{ color: "var(--muted-2)", fontSize: "12px" }}>
+              Try selecting a different date
+            </div>
           </div>
-          <div className="compact-match finished">
-            <span>FT</span>
-            <div><Crest name="Aston Villa" size="small" src={crest.villa} /><span>Aston Villa</span><strong>1</strong></div>
-            <div><Crest name="Manchester United" size="small" src={crest.united} /><span>Man United</span><strong>3</strong></div>
-          </div>
-        </div>
-        <div className="competition-block">
-          <div className="competition-head"><span className="league-mark europe">CL</span><strong>Champions League</strong><span>Europe</span></div>
-          <div className="compact-match">
-            <span>20:00</span>
-            <div><Crest name="Real Madrid" size="small" src={crest.real} /><span>Real Madrid</span><strong>–</strong></div>
-            <div><Crest name="Inter" size="small" src={crest.inter} /><span>Inter Milan</span><strong>–</strong></div>
-          </div>
-          <div className="compact-match finished">
-            <span>FT</span>
-            <div><Crest name="Barcelona" size="small" src={crest.barca} /><span>Barcelona</span><strong>2</strong></div>
-            <div><Crest name="Inter" size="small" src={crest.inter} /><span>Inter Milan</span><strong>2</strong></div>
-          </div>
-        </div>
+        )}
         <div className="sync-card">
           <Icon name="calendar" size={24} />
           <div><strong>Never miss kick-off</strong><span>Sync fixtures with your calendar</span></div>
